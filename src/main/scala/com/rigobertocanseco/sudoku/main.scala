@@ -1,3 +1,7 @@
+package com.rigobertocanseco.sudoku
+
+
+
 @main
 def main(): Unit =
   println("Hello world!")
@@ -19,7 +23,7 @@ def main(): Unit =
   //println(zeros.index().mkString("\n"))
 
   for (i <- grid.zip().valueEqualTo(Num.ZERO)) {
-    println(s"${i}: ${grid.options(i(1)(0), i(1)(1)).set.mkString(" ")}")
+    println(s"${i}: ${grid.options(i.position.row, i.position.col).set.mkString(" ")}")
   }
 
   Sudoku.numbers.foreach(n => println(s"$n: ${grid.zip().valueEqualTo(n).length}"))
@@ -41,12 +45,12 @@ def main(): Unit =
   }
 
   println("Options equals to one:")
-  for (i <- grid.zip().filter(e => e(1)(0) == 0).map(_(0).options.set).filter(_.size == 1)) {
+  for (i <- grid.zip().filter(e => e.position.row == 0).map(_.cell.options.set).filter(_.size == 1)) {
     println(s"${i}")
   }
   println("Options equals more that one:")
   for (i <- grid.zip()
-    .map(e => e(0).options.set.map(s => (s, e(1))))) {
+    .map(e => e.cell.options.set.map(s => (s, e.position )))) {
     println(s"${i}")
   }
 
