@@ -17,6 +17,6 @@ def main(): Unit =
   val array: Array[Array[Int]] = sudoku.readFile("src/main/resources/sudoku2.txt")
   val grid: Grid = sudoku.arrayToGrid(array)
   grid.print()
-  // new SudokuGame().run()
+  new SudokuGame().run()
 
 end main

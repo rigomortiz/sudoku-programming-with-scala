@@ -7,9 +7,11 @@ package com.rigobertocanseco.sudoku.core
 import scala.io.Source
 //import scala.collection.parallel.CollectionConverters._
 
-enum Num {
+/*enum Num {
   case ZERO, ONE, TWO, TREE, FOUR, FIVE, SIX, SEVEN, EIGHT, NINE
-}
+}*/
+type Num = Int
+val ZERO = 0
 
 case class Options(set: Set[Num])
 case class Cell(value: Num, options: Options)
@@ -36,7 +38,7 @@ class NakedSolver extends Strategy {
 
 object Sudoku {
   val size = 9
-  val numbers: Array[Num] = Array[Num](Num.values: _*)
+  val numbers: Array[Num] = Array[Num](1 to 9 :_*)
 }
 
 class Sudoku(val size: Int) {
@@ -50,17 +52,17 @@ class Sudoku(val size: Int) {
       .toArray
 
   def arrayToGrid(a: Array[Array[Int]]): Grid =
-    Grid(a.map(r => r.map(c => Cell(Num.values.apply(c), Options(Set())))))
+    Grid(a.map(r => r.map(c => Cell(c, Options(Set())))))
 
 }
 
 extension (a: Array[Num]) {
   def difference(b: Array[Num]): Array[Num] =
-    a.filter(n => !b.contains(n)).filter(n => n != Num.ZERO)
+    a.filter(n => !b.contains(n)).filter(n => n != ZERO)
 }
 
 extension (a: Array[Cell]) {
-  def getValues: Array[Num] = a.map(cell => cell.value).filter(e => e != Num.ZERO)
+  def getValues: Array[Num] = a.map(cell => cell.value).filter(e => e != ZERO)
   def getOptions: Array[Num] = a.map(cell => cell.options.set).reduce(_ union _).toArray
   def union(b: Array[Cell]): Array[Cell] =
     a.concat(b).distinct
@@ -81,7 +83,7 @@ extension (a: Array[Pair]) {
     val pair = a.filter(pair => pair.cell.options.set.size == 2)
     if pair.length == 2 then pair else Array()*/
 
-  def emptyCells(): Array[Pair] = a.filter(_.cell.value == Num.ZERO)
+  def emptyCells(): Array[Pair] = a.filter(_.cell.value == ZERO)
   def groupBy(): List[Map[Num, Array[Pair]]] =
     a.flatMap(e => e.cell.options.set.map(i => (i, e)))
     .groupBy(e => e(0))
@@ -131,8 +133,8 @@ extension (g: Grid) {
   }
   def options(): Grid =
     Grid(g.zip().map(pair => pair.cell.value match {
-      case Num.ZERO =>
-        Cell(Num.ZERO, Options(Set(Sudoku.numbers.difference(
+      case ZERO =>
+        Cell(ZERO, Options(Set(Sudoku.numbers.difference(
           g.row(pair.position.row)
             .union(g.col(pair.position.col))
             .union(g.square(pair.position.row, pair.position.col))
@@ -163,7 +165,7 @@ extension (g: Grid) {
     val grid = g.options()
       grid.zip()
         .filter(p => p.position.col == 1)
-        .filter(p => p.cell.value == Num.ZERO)
+        .filter(p => p.cell.value == ZERO)
         .flatMap(e => e.cell.options.set.map(i => (i, e.position)))
         .groupBy(e => e(0))
         .filter(e => e(1).size == 1)

@@ -6,9 +6,12 @@
 import scala.io.Source
 //import scala.collection.parallel.CollectionConverters._
 
-enum Num {
-  case ZERO, ONE, TWO, TREE, FOUR, FIVE, SIX, SEVEN, EIGHT, NINE
-}
+//enum Num {
+// case ZERO, ONE, TWO, TREE, FOUR, FIVE, SIX, SEVEN, EIGHT, NINE
+//}
+type Num = Int
+//type Num = 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8 | 9
+val ZERO = 0
 
 case class Options(set: Set[Num])
 case class Cell(value: Num, options: Options)
@@ -29,7 +32,7 @@ class NakedSolver extends SudokuSolver {
 
 object Sudoku {
   val size = 9
-  val numbers: Array[Num] = Array[Num](Num.values: _*)
+  val numbers: Array[Num] = Array[Num](1 to 9: _*)
 }
 
 class Sudoku(val size: Int) {
@@ -43,17 +46,17 @@ class Sudoku(val size: Int) {
       .toArray
 
   def arrayToGrid(a: Array[Array[Int]]): Grid =
-    Grid(a.map(r => r.map(c => Cell(Num.values.apply(c), Options(Set())))))
+    Grid(a.map(r => r.map(c => Cell(c, Options(Set())))))
 
 }
 
 extension (a: Array[Num]) {
   def difference(b: Array[Num]): Array[Num] =
-    a.filter(n => !b.contains(n)).filter(n => n != Num.ZERO)
+    a.filter(n => !b.contains(n)).filter(n => n != ZERO)
 }
 
 extension (a: Array[Cell]) {
-  def getValues: Array[Num] = a.map(cell => cell.value).filter(e => e != Num.ZERO)
+  def getValues: Array[Num] = a.map(cell => cell.value).filter(e => e != ZERO)
   def getOptions: Array[Num] = a.map(cell => cell.options.set).reduce(_ union _).toArray
   def union(b: Array[Cell]): Array[Cell] =
     a.concat(b).distinct
