@@ -6,8 +6,8 @@ import org.gillius.jalleg.framework.{AllegroAddon, Game}
 import org.gillius.jalleg.binding.ALLEGRO_FONT
 
 class SudokuGame extends Game {
-  private val white: ALLEGRO_COLOR = al_map_rgb_f(1.toByte, 1.toByte, 1.toByte)
-  private var font: ALLEGRO_FONT = _
+  final private val white: ALLEGRO_COLOR = al_map_rgb_f(1.toByte, 1.toByte, 1.toByte)
+  final private var font: ALLEGRO_FONT = _
 
   override def onAllegroStarted(): Unit = {
     initAddons(AllegroAddon.Primitives, AllegroAddon.Font, AllegroAddon.Keyboard, AllegroAddon.Joystick,

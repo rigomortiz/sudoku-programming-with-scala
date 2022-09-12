@@ -11,7 +11,7 @@ import scala.io.Source
   case ZERO, ONE, TWO, TREE, FOUR, FIVE, SIX, SEVEN, EIGHT, NINE
 }*/
 type Num = Int
-val ZERO = 0
+final val ZERO = 0
 
 case class Options(set: Set[Num])
 case class Cell(value: Num, options: Options)
@@ -65,7 +65,7 @@ extension (a: Array[Cell]) {
   def getValues: Array[Num] = a.map(cell => cell.value).filter(e => e != ZERO)
   def getOptions: Array[Num] = a.map(cell => cell.options.set).reduce(_ union _).toArray
   def union(b: Array[Cell]): Array[Cell] =
-    a.concat(b).distinct
+    (a ++ b).distinct
 }
 
 extension (a: Array[Pair]) {
@@ -149,9 +149,23 @@ extension (g: Grid) {
   def zip(): Array[Pair] =
     g.array.zipWithIndex.flatMap(row => row(0).zipWithIndex.map(cell => Pair(cell(0), Position(row(1), cell(1)))))
 
-  def print(): Unit = g.array.foreach( row => {
-    println(row.map(cell => cell.value.toString).mkString(" "))
-  })
+  def sprint(): Unit = {
+    for (row <- g.array) {
+      for (cell <- row) {
+        if cell.value == ZERO then
+          print(cell.options.set.mkString("(", " ", ")"))
+        else
+          print(s"${cell.value}")
+        printf("\t")
+      }
+      println()
+    }
+    /*g.array.foreach( row => {
+      if row(0).value == ZERO then
+        row.map(cell => cell.options.set).grouped(3).map(_.mkString(",")) foreach println
+      else println(row.map(cell => cell.value).mkString(" "))
+    })*/
+  }
 
   def strategyNakedSimple(): Grid = {
     val grid = g.options()

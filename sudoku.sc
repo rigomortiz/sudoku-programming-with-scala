@@ -3,14 +3,18 @@
  * Sudoku Puzzle in Scala 3.0
  */
 
+
+/**
+ * Sudoku Puzzle in Scala 3.0
+ */
+
 import scala.io.Source
 //import scala.collection.parallel.CollectionConverters._
 
-//enum Num {
-// case ZERO, ONE, TWO, TREE, FOUR, FIVE, SIX, SEVEN, EIGHT, NINE
-//}
+/*enum Num {
+  case ZERO, ONE, TWO, TREE, FOUR, FIVE, SIX, SEVEN, EIGHT, NINE
+}*/
 type Num = Int
-//type Num = 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8 | 9
 val ZERO = 0
 
 case class Options(set: Set[Num])
@@ -18,21 +22,13 @@ case class Cell(value: Num, options: Options)
 case class Grid(array: Array[Array[Cell]])
 case class Position(row: Int, col: Int)
 case class Pair(cell: Cell, position: Position)
-trait SudokuSolver {
-  def solve(grid: Grid): Grid
-}
-/**
- * The Strategy Naked Single:
- * If a cell only has a single candidate, that candidate solves the cell. This is obvious: if there are no other
- * possible candidates in a cell, the only one present must be it.
- */
-class NakedSolver extends SudokuSolver {
-  def solve(grid: Grid): Grid = ???
+trait Strategy {
+  def apply(grid: Grid): Grid
 }
 
 object Sudoku {
   val size = 9
-  val numbers: Array[Num] = Array[Num](1 to 9: _*)
+  val numbers: Array[Num] = Array[Num](1 to 9 :_*)
 }
 
 class Sudoku(val size: Int) {
@@ -65,18 +61,19 @@ extension (a: Array[Cell]) {
 extension (a: Array[Pair]) {
   def valueEqualTo(n: Num): Array[Pair] = a.filter(cell => cell.cell.value == n)
   def index(): Array[Position] = a.map(_.position)
-  def cols(col: Int): Array[Pair] = a.filter(_.position.col == col)
-  def rows(row: Int): Array[Pair] = a.filter(_.position.row == row)
-  def box(num: Int): Array[Pair] = {
+  def c(col: Int): Array[Pair] = a.filter(_.position.col == col)
+  def r(row: Int): Array[Pair] = a.filter(_.position.row == row)
+  def b(num: Int): Array[Pair] = {
     val row = (num / 3) * 3
     val col = (num % 3) * 3
     a.filter(p => p.position.row >= row && p.position.row < row + 3 && p.position.col >= col && p.position.col < col + 3)
   }
   def uniqueOption(): Array[Pair] = a.filter(pair => pair.cell.options.set.size == 1)
   /*def pair(): Array[Pair] =
-    val pair = a.filter (pair => pair.cell.options.set.size == 2)
+    val pair = a.filter(pair => pair.cell.options.set.size == 2)
     if pair.length == 2 then pair else Array()*/
-  def emptyCells(): Array[Pair] = a.filter(_.cell.value == Num.ZERO)
+
+  def emptyCells(): Array[Pair] = a.filter(_.cell.value == ZERO)
   def groupBy(): List[Map[Num, Array[Pair]]] =
     a.flatMap(e => e.cell.options.set.map(i => (i, e)))
       .groupBy(e => e(0))
@@ -107,9 +104,9 @@ extension (l: List[Map[Position, Array[Num]]]) {
   def p = ???
 }
 
-extension (l: List[Map[Num, Array[Pair]]]) {
-  def pair(): Array[(Num, Array[Pair])] = l.flatMap(e => e.map(e => (e._1,e._2)).filter(_._2.length == 2)).toArray
-    //.flatMap(e => e._2.filter( i => i.cell.options.set.size == 2))
+extension (l:  List[Map[Num, Array[Pair]]]) {
+  def pair(): Array[Pair] = l.flatMap(e => e.map(e => (e._1,e._2)).filter(_._2.length == 2)).toArray
+    .flatMap(e => e._2.filter( i => i.cell.options.set.size == 2))
 }
 
 extension (g: Grid) {
@@ -126,8 +123,8 @@ extension (g: Grid) {
   }
   def options(): Grid =
     Grid(g.zip().map(pair => pair.cell.value match {
-      case Num.ZERO =>
-        Cell(Num.ZERO, Options(Set(Sudoku.numbers.difference(
+      case ZERO =>
+        Cell(ZERO, Options(Set(Sudoku.numbers.difference(
           g.row(pair.position.row)
             .union(g.col(pair.position.col))
             .union(g.square(pair.position.row, pair.position.col))
@@ -142,7 +139,9 @@ extension (g: Grid) {
   def zip(): Array[Pair] =
     g.array.zipWithIndex.flatMap(row => row(0).zipWithIndex.map(cell => Pair(cell(0), Position(row(1), cell(1)))))
 
-  def print(): Unit = g.array.foreach(row => println(row.map(cell => cell.value.toString).mkString(" ")))
+  def print(): Unit = g.array.foreach( row => {
+    println(row.map(cell => cell.value.toString).mkString(" "))
+  })
 
   def strategyNakedSimple(): Grid = {
     val grid = g.options()
@@ -156,12 +155,27 @@ extension (g: Grid) {
     val grid = g.options()
     grid.zip()
       .filter(p => p.position.col == 1)
-      .filter(p => p.cell.value == Num.ZERO)
+      .filter(p => p.cell.value == ZERO)
       .flatMap(e => e.cell.options.set.map(i => (i, e.position)))
       .groupBy(e => e(0))
       .filter(e => e(1).size == 1)
       .map(e => e(1))
     grid
+  }
+}
+
+/**
+ * The Strategy Naked Single:
+ * If a cell only has a single candidate, that candidate solves the cell. This is obvious: if there are no other
+ * possible candidates in a cell, the only one present must be it.
+ */
+class NakedSolver extends Strategy {
+  def apply(grid: Grid): Grid = {
+    val g = grid
+    grid.options().zip()
+      .filter(pair => pair.cell.options.set.size == 1)
+      .foreach(e => g.array(e.position.row)(e.position.col) = Cell(e.cell.options.set.head, Options(Set())))
+    g
   }
 }
 
@@ -171,29 +185,29 @@ val array = sudoku.readFile("C:\\Users\\w10\\Documents\\Projects\\sudoku\\src\\m
 val grid: Grid = sudoku.arrayToGrid(array)
 
 for( i <- 0 until 9)
-  val p = grid.options().zip().rows(i).emptyCells().groupBy()
+  val p = grid.options().zip().r(i).emptyCells().groupBy()
     //.flatMap(e => e.map(e => (e._1,e._2)))//.filter(_._2.length == 2)).toArray
   println(s"${p}")
 
-grid.options().zip().rows(0).emptyCells().groupBy()
-grid.options().zip().rows(0).emptyCells().groupBy().flatMap(e => e)
-grid.options().zip().rows(0).emptyCells().groupBy().flatMap(e => e)
+grid.options().zip().r(0).emptyCells().groupBy()
+grid.options().zip().r(0).emptyCells().groupBy().flatMap(e => e)
+grid.options().zip().r(0).emptyCells().groupBy().flatMap(e => e)
   .filter(e => e._2.length == 2)
 
-grid.options().zip().rows(0).emptyCells()
-grid.options().zip().rows(0).emptyCells()
+grid.options().zip().r(0).emptyCells()
+grid.options().zip().r(0).emptyCells()
   .filter(e => e.cell.options.set.size == 2)
 
-grid.options().zip().rows(0).emptyCells()
+grid.options().zip().r(0).emptyCells()
   .filter(e => e.cell.options.set.size == 2)
-  .groupBy().filter( (e) => e._2.length == 2)
+  .groupBy().filter( (e) => e(2).length == 2)
 
-grid.options().zip().rows(0).emptyCells()
+grid.options().zip().r(0).emptyCells()
   .filter(e => e.cell.options.set.size == 2)
   .groupBy()
 
 for( i <- 0 until 9)
-  val v = grid.options().zip().rows(i).emptyCells()
+  val v = grid.options().zip().r(i).emptyCells()
     .filter(e => e.cell.options.set.size == 2)
     .groupBy()
   println(v.mkString(" "))
