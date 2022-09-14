@@ -1,7 +1,10 @@
 package com.rigobertocanseco.sudoku.core
 
-import com.rigobertocanseco.sudoku.core.{Grid, Strategy}
+import com.rigobertocanseco.sudoku.core.{Grid}
 
+trait Strategy {
+  def apply(grid: Grid): Grid
+}
 class UniqueSolver extends Strategy {
   def apply(grid: Grid): Grid = ???
 }

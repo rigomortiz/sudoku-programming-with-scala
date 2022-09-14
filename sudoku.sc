@@ -3,11 +3,6 @@
  * Sudoku Puzzle in Scala 3.0
  */
 
-
-/**
- * Sudoku Puzzle in Scala 3.0
- */
-
 import scala.io.Source
 //import scala.collection.parallel.CollectionConverters._
 
@@ -18,10 +13,12 @@ type Num = Int
 val ZERO = 0
 
 case class Options(set: Set[Num])
-case class Cell(value: Num, options: Options)
-case class Grid(array: Array[Array[Cell]])
 case class Position(row: Int, col: Int)
-case class Pair(cell: Cell, position: Position)
+case class NumPositions(num: Num, positions: Position*)
+
+case class Cell(value: Num, options: Options, position: Position)
+//case class Pair(cell: Cell, position: Position)
+case class Grid(array: Array[Array[Cell]])
 trait Strategy {
   def apply(grid: Grid): Grid
 }
@@ -42,8 +39,10 @@ class Sudoku(val size: Int) {
       .toArray
 
   def arrayToGrid(a: Array[Array[Int]]): Grid =
-    Grid(a.map(r => r.map(c => Cell(c, Options(Set())))))
-
+    val array = (0 until 9).map(row => (0 until 9).map(col =>
+      Cell(a(row)(col), Options(Set()), Position(row, col))
+    ).toArray).toArray
+    Grid(array)
 }
 
 extension (a: Array[Num]) {
@@ -55,63 +54,40 @@ extension (a: Array[Cell]) {
   def getValues: Array[Num] = a.map(cell => cell.value).filter(e => e != ZERO)
   def getOptions: Array[Num] = a.map(cell => cell.options.set).reduce(_ union _).toArray
   def union(b: Array[Cell]): Array[Cell] =
-    a.concat(b).distinct
-}
+    (a ++ b).distinct
+  def unique(): Array[Cell] =
+    a.filter(cell => cell.options.set.size == 1)
 
-extension (a: Array[Pair]) {
-  def valueEqualTo(n: Num): Array[Pair] = a.filter(cell => cell.cell.value == n)
-  def index(): Array[Position] = a.map(_.position)
-  def c(col: Int): Array[Pair] = a.filter(_.position.col == col)
-  def r(row: Int): Array[Pair] = a.filter(_.position.row == row)
-  def b(num: Int): Array[Pair] = {
-    val row = (num / 3) * 3
-    val col = (num % 3) * 3
-    a.filter(p => p.position.row >= row && p.position.row < row + 3 && p.position.col >= col && p.position.col < col + 3)
-  }
-  def uniqueOption(): Array[Pair] = a.filter(pair => pair.cell.options.set.size == 1)
+  def groupBy(): Map[Num, Array[Cell]] =
+    a.flatMap(e => e.options.set.map(i => (i, e)))
+      .groupBy(e => e(0))
+      .flatMap(e => Map(e._1 -> e._2.map(e => e._2)))
+
+  def groupByOption(): Map[Num, Array[Position]] =
+    a.flatMap(e => e.options.set.map(i => (i, e.position)))
+      .groupBy(e => e(0))
+      .flatMap(e => Map(e._1 -> e._2.map(e => e._2)))
+
+  def groupByPosition(): Map[Position, Array[Num]] =
+    a.flatMap(e => e.options.set.map(i => (i, e.position)))
+      .groupBy(e => e(1))
+      .flatMap(e => Map(e._1 -> e._2.map(e => e._1)))
   /*def pair(): Array[Pair] =
     val pair = a.filter(pair => pair.cell.options.set.size == 2)
     if pair.length == 2 then pair else Array()*/
+  def emptyCells(): Array[Cell] = a.filter(cell => cell.value == ZERO)
 
-  def emptyCells(): Array[Pair] = a.filter(_.cell.value == ZERO)
-  def groupBy(): List[Map[Num, Array[Pair]]] =
-    a.flatMap(e => e.cell.options.set.map(i => (i, e)))
-      .groupBy(e => e(0))
-      .map(e => Map(e._1 -> e._2.map(e => e._2)))
-      .toList
-  def groupByOption(): List[Map[Num, Array[Position]]] =
-    a.flatMap(e => e.cell.options.set.map(i => (i, e.position)))
-      .groupBy(e => e(0))
-      .map(e => Map(e._1 -> e._2.map(e => e._2)))
-      .toList
-  def groupByPosition(): List[Map[Position, Array[Num]]] =
-    a.flatMap(e => e.cell.options.set.map(i => (i, e.position)))
-      .groupBy(e => e(1))
-      .map(e => Map(e._1 -> e._2.map(e => e._1)))
-      .toList
 }
 
-extension (l: List[Map[Num, Array[Position]]]) {
-  def unique: Array[(Num, Array[Position])] = l.flatMap(e => e.map(e => (e._1,e._2)).filter(_._2.length == 1)).toArray
-  //def pair(): Array[(Num, Array[Position])] = l.flatMap(e => e.map(e => (e._1,e._2)).filter(_._2.length == 2)).toArray
-}
-
-extension (l: List[Map[Position, Array[Num]]]) {
-  //def pair(): Array[(Position, Array[Num])] = l.flatMap(e => e.map(e => (e._1,e._2)).filter(_._2.length == 2)).toArray
-  /*def pair(): Array[(Position, Array[Num])] =
-    val p = l.flatMap(e => e.map(e => (e._1, e._2)).filter(_._2.length == 2)).toArray
-    if p.length == 2 && p(0)(0) == p(1)(0) && p(0)(1) == p(1)(1)  then p else Array()*/
-  def p = ???
-}
-
-extension (l:  List[Map[Num, Array[Pair]]]) {
-  def pair(): Array[Pair] = l.flatMap(e => e.map(e => (e._1,e._2)).filter(_._2.length == 2)).toArray
-    .flatMap(e => e._2.filter( i => i.cell.options.set.size == 2))
-}
-
-extension (g: Grid) {
-  def row(row: Int): Array[Cell] = g.array(row)
-  def col(col: Int): Array[Cell] = g.array.map(row => row(col))
+extension (a: Array[Array[Cell]]) {
+  def row(row: Int): Array[Cell] = a(row)
+  def col(col: Int): Array[Cell] = a.map(row => row(col))
+  def box(num: Int): Array[Cell] = {
+    val sqrt = Math.sqrt(Sudoku.size).toInt
+    val row = (num / 3) * 3
+    val col = (num % 3) * 3
+    a.map(row => row.slice(col, col + sqrt)).slice(row, row + sqrt).flatten
+  }
   def square(row: Int, col: Int): Array[Cell] = {
     val sqrt = Math.sqrt(Sudoku.size).toInt
     val rowStart = (row / sqrt) * sqrt
@@ -119,95 +95,247 @@ extension (g: Grid) {
     val rowEnd = rowStart + sqrt
     val colEnd = colStart + sqrt
 
-    g.array.slice(rowStart, rowEnd).flatMap(row => row.slice(colStart, colEnd))
+    a.slice(rowStart, rowEnd).flatMap(row => row.slice(colStart, colEnd))
   }
-  def options(): Grid =
-    Grid(g.zip().map(pair => pair.cell.value match {
-      case ZERO =>
-        Cell(ZERO, Options(Set(Sudoku.numbers.difference(
-          g.row(pair.position.row)
-            .union(g.col(pair.position.col))
-            .union(g.square(pair.position.row, pair.position.col))
-            .getValues): _*))
-        )
-      case _ => pair.cell
-    }).grouped(Sudoku.size).toArray)
+}
+
+extension (g: Grid) {
+  def options(): Array[Array[Cell]] =
+    (0 until 9).map(row => (0 until 9).map(col =>
+      if g.array(row)(col).value == ZERO then
+        Cell(ZERO, options(row, col), Position(row, col))
+      else g.array(row)(col)
+    ).toArray).toArray
 
   def options(r: Int, c: Int): Options =
-    Options(Set(Sudoku.numbers.difference(g.row(r).union(g.col(c)).union(g.square(r, c)).getValues): _*))
+    Options(Set(Sudoku.numbers.difference(g.array.row(r).union(g.array.col(c)).union(g.array.square(r, c)).getValues): _*))
 
-  def zip(): Array[Pair] =
-    g.array.zipWithIndex.flatMap(row => row(0).zipWithIndex.map(cell => Pair(cell(0), Position(row(1), cell(1)))))
+  // def zip(): Array[Cell] =
+  //  g.array.zipWithIndex.flatMap(row => row(0).zipWithIndex.map(cell => Pair(cell(0), Position(row(1), cell(1)))))
 
-  def print(): Unit = g.array.foreach( row => {
-    println(row.map(cell => cell.value.toString).mkString(" "))
-  })
 
-  def strategyNakedSimple(): Grid = {
-    val grid = g.options()
-    grid.zip()
-      .filter(pair => pair.cell.options.set.size == 1)
-      .foreach(e => grid.array(e.position.row)(e.position.col) = Cell(e.cell.options.set.head, Options(Set())))
-    grid
-  }
-
-  def strategyUnique(): Grid = {
-    val grid = g.options()
-    grid.zip()
-      .filter(p => p.position.col == 1)
-      .filter(p => p.cell.value == ZERO)
-      .flatMap(e => e.cell.options.set.map(i => (i, e.position)))
-      .groupBy(e => e(0))
-      .filter(e => e(1).size == 1)
-      .map(e => e(1))
-    grid
+  def sprint(): Unit = {
+    for (row <- g.array) {
+      for (cell <- row) {
+        if cell.value == ZERO then
+          print(cell.options.set.mkString("(", " ", ")"))
+        else
+          print(s"${cell.value}")
+        printf("\t")
+      }
+      println()
+    }
+    /*g.array.foreach( row => {
+      if row(0).value == ZERO then
+        row.map(cell => cell.options.set).grouped(3).map(_.mkString(",")) foreach println
+      else println(row.map(cell => cell.value).mkString(" "))
+    })*/
   }
 }
 
-/**
- * The Strategy Naked Single:
- * If a cell only has a single candidate, that candidate solves the cell. This is obvious: if there are no other
- * possible candidates in a cell, the only one present must be it.
- */
-class NakedSolver extends Strategy {
-  def apply(grid: Grid): Grid = {
-    val g = grid
-    grid.options().zip()
-      .filter(pair => pair.cell.options.set.size == 1)
-      .foreach(e => g.array(e.position.row)(e.position.col) = Cell(e.cell.options.set.head, Options(Set())))
-    g
-  }
-}
 
 
 val sudoku = new Sudoku()
 val array = sudoku.readFile("C:\\Users\\w10\\Documents\\Projects\\sudoku\\src\\main\\resources\\sudoku2.txt")
 val grid: Grid = sudoku.arrayToGrid(array)
+(0 until 9).map(i => {
+  val rows = grid.options().row(i).emptyCells().groupByOption().filter(pair => pair._2.size == 1)
+  val cols = grid.options().col(i).emptyCells().groupByOption().filter(pair => pair._2.size == 1)
+  val boxs = grid.options().box(i).emptyCells().groupByOption().filter(pair => pair._2.size == 1)
+  (rows, cols, boxs)
+})
 
-for( i <- 0 until 9)
-  val p = grid.options().zip().r(i).emptyCells().groupBy()
-    //.flatMap(e => e.map(e => (e._1,e._2)))//.filter(_._2.length == 2)).toArray
-  println(s"${p}")
+for (i <- 0 until 9)
+  val v: Map[Num, Array[Position]] = grid.options().row(i).emptyCells()
+    .groupByOption()
+  println(s"Row ${i}:")
+  v.foreach(e => {
+    println(s"\tNum ${e._1} has ${e._2.length} options:")
+    e._2.foreach(e => println(s"\t\t${e}"))
+  })
 
-grid.options().zip().r(0).emptyCells().groupBy()
-grid.options().zip().r(0).emptyCells().groupBy().flatMap(e => e)
-grid.options().zip().r(0).emptyCells().groupBy().flatMap(e => e)
-  .filter(e => e._2.length == 2)
+for (i <- 0 until 9)
+  val v: Map[Num, Array[Position]] = grid.options().col(i).emptyCells()
+    .groupByOption()
+  println(s"Col ${i}:")
+  v.foreach(e => {
+    println(s"\tNum ${e._1} has ${e._2.length} options:")
+    e._2.foreach(e => println(s"\t\t${e}"))
+  })
 
-grid.options().zip().r(0).emptyCells()
-grid.options().zip().r(0).emptyCells()
-  .filter(e => e.cell.options.set.size == 2)
+for (i <- 0 until 9)
+  val v: Map[Num, Array[Position]] = grid.options().box(i).emptyCells()
+    .groupByOption()
+  println(s"Box ${i}:")
+  v.foreach(e => {
+    println(s"\tNum ${e._1} has ${e._2.length} options:")
+    e._2.foreach(e => println(s"\t\t${e}"))
+  })
 
-grid.options().zip().r(0).emptyCells()
-  .filter(e => e.cell.options.set.size == 2)
-  .groupBy().filter( (e) => e(2).length == 2)
+println("Box")
+(0 until 9).toList.map(i => grid.options().box(i).emptyCells().groupByOption().filter(pair => pair._2.size == 1))
+  .foreach(println)
 
-grid.options().zip().r(0).emptyCells()
-  .filter(e => e.cell.options.set.size == 2)
-  .groupBy()
 
-for( i <- 0 until 9)
-  val v = grid.options().zip().r(i).emptyCells()
-    .filter(e => e.cell.options.set.size == 2)
-    .groupBy()
-  println(v.mkString(" "))
+(0 until 9).toList.map(i => grid.options().box(i).emptyCells().groupByOption().filter(pair => pair._2.size == 1))
+
+(0 until 9).toList.map(i => grid.options().box(i).emptyCells().groupByOption().filter(pair => pair._2.size == 1))
+  .flatMap(e => e.map(e => (e._1, e._2.head)))
+
+grid.options().flatMap(_.filter(_.options.set.size == 1))
+
+grid.options()
+
+grid.array.square(0, 0)
+grid.options(0,0)
+grid.options(0,1)
+grid.array.square(0, 1)
+
+
+(0 until 9).map(
+  i => {
+    val b = grid.options().box(i).emptyCells().groupByOption().filter(pair => pair._2.length == 1)
+    val c = grid.options().col(i).emptyCells().groupByOption().filter(pair => pair._2.length == 1)
+    val r = grid.options().row(i).emptyCells().groupByOption().filter(pair => pair._2.length == 1)
+    (b, c, r)
+  }
+)
+  .flatMap(e => e._1.map(e => (e._1, e._2.head))
+    ++ e._2.map(e => (e._1, e._2.head))
+    ++ e._3.map(e => (e._1, e._2.head)))
+  .toList.distinct
+
+grid.options().array.flatMap(_.filter(_.options.set.size == 1))
+
+grid.options().box(3).emptyCells().groupByOption().filter(pair => pair._2.length == 2)
+
+grid.options().box(3).emptyCells().groupByOption()
+
+grid.options().box(3).emptyCells().groupByOption().filter(pair => pair._2.length == 1)
+
+(0 until 9).map(i => {
+  (grid.options().box(i).emptyCells().groupByOption().filter(pair => pair._2.length == 1),
+    grid.options().col(i).emptyCells().groupByOption().filter(pair => pair._2.length == 1),
+    grid.options().row(i).emptyCells().groupByOption().filter(pair => pair._2.length == 1))
+}).flatMap(e => e._1.map(e => (e._1, e._2)) ++ e._2.map(e => (e._1, e._2)) ++ e._3.map(e => (e._1, e._2)))
+  .toList.distinct.map(e => Cell(e._1, Options(Set()), e._2))
+  .foreach(cell => println(s"Cell ${cell.position} has only one option in its box, row or column: ${cell.value}"))
+
+(0 until 9).map(i => {
+  (grid.options().box(i).emptyCells().groupByOption().filter(pair => pair._2.length == 1),
+    grid.options().col(i).emptyCells().groupByOption().filter(pair => pair._2.length == 1),
+    grid.options().row(i).emptyCells().groupByOption().filter(pair => pair._2.length == 1))
+}).flatMap(e => e._1.map(e => (e._1, e._2.head)) ++ e._2.map(e => (e._1, e._2.head)) ++ e._3.map(e => (e._1, e._2.head)))
+  .toList//.distinct.map(e => Cell(e._1, Options(Set()), e._2))
+//.foreach(cell => println(s"Cell ${cell.position} has only one option in its box, row or column: ${cell.value}"))
+
+
+(0 until 9).map(i => {
+  (grid.options().box(i).emptyCells().groupByOption().filter(pair => pair._2.length == 1),
+    grid.options().col(i).emptyCells().groupByOption().filter(pair => pair._2.length == 1),
+    grid.options().row(i).emptyCells().groupByOption().filter(pair => pair._2.length == 1))
+}).flatMap(e => e._1.map(e => (e._1, e._2)) ++ e._2.map(e => (e._1, e._2)) ++ e._3.map(e => (e._1, e._2)))
+  .toList
+
+(0 until 9).map(i => {
+  (grid.options().box(i).emptyCells().groupByOption().filter(pair => pair._2.length == 2),
+    grid.options().col(i).emptyCells().groupByOption().filter(pair => pair._2.length == 2),
+    grid.options().row(i).emptyCells().groupByOption().filter(pair => pair._2.length == 2))
+}).flatMap(e => e._1.map(e => (e._1, e._2)) ++ e._2.map(e => (e._1, e._2)) ++ e._3.map(e => (e._1, e._2)))
+  .toList
+
+
+(0 until 9).map(i => {
+  (grid.options().box(i).emptyCells().groupByOption().filter(pair => pair._2.length == 1),
+    grid.options().col(i).emptyCells().groupByOption().filter(pair => pair._2.length == 1),
+    grid.options().row(i).emptyCells().groupByOption().filter(pair => pair._2.length == 1))
+}).flatMap(e => e._1.map(e => (e._1, e._2)) ++ e._2.map(e => (e._1, e._2)) ++ e._3.map(e => (e._1, e._2)))
+  .toList.distinct
+
+(0 until 9).map(i => {
+  (grid.options().box(i).emptyCells().groupByOption().filter(pair => pair._2.length == 2),
+    grid.options().col(i).emptyCells().groupByOption().filter(pair => pair._2.length == 2),
+    grid.options().row(i).emptyCells().groupByOption().filter(pair => pair._2.length == 2))
+}).flatMap(e => e._1.map(e => (e._1, e._2)) ++ e._2.map(e => (e._1, e._2)) ++ e._3.map(e => (e._1, e._2)))
+  .toList.distinct
+
+grid.options().box(3).emptyCells().groupByOption().filter(pair => pair._2.length == 2)
+grid.options().box(0).emptyCells().groupByOption().filter(pair => pair._2.length == 2)
+grid.options().box(1).emptyCells().groupByOption().filter(pair => pair._2.length == 2)
+grid.options().box(2).emptyCells().groupByOption().filter(pair => pair._2.length == 2)
+grid.options().box(4).emptyCells().groupByOption().filter(pair => pair._2.length == 2)
+grid.options().box(5).emptyCells().groupByOption().filter(pair => pair._2.length == 2)
+grid.options().box(7).emptyCells().groupByOption().filter(pair => pair._2.length == 2)
+grid.options().box(6).emptyCells().groupByOption().filter(pair => pair._2.length == 2)
+grid.options().box(8).emptyCells().groupByOption().filter(pair => pair._2.length == 2)
+
+grid.options().col(0).emptyCells().groupByOption().filter(pair => pair._2.length == 2)
+grid.options().col(1).emptyCells().groupByOption().filter(pair => pair._2.length == 2)
+grid.options().col(2).emptyCells().groupByOption().filter(pair => pair._2.length == 2)
+grid.options().col(3).emptyCells().groupByOption().filter(pair => pair._2.length == 2)
+grid.options().col(4).emptyCells().groupByOption().filter(pair => pair._2.length == 2)
+grid.options().col(5).emptyCells().groupByOption().filter(pair => pair._2.length == 2)
+grid.options().col(6).emptyCells().groupByOption().filter(pair => pair._2.length == 2)
+grid.options().col(7).emptyCells().groupByOption().filter(pair => pair._2.length == 2)
+grid.options().col(8).emptyCells().groupByOption().filter(pair => pair._2.length == 2)
+
+
+grid.options().row(0).emptyCells().groupByOption().filter(pair => pair._2.length == 2)
+grid.options().row(1).emptyCells().groupByOption().filter(pair => pair._2.length == 2)
+grid.options().row(2).emptyCells().groupByOption().filter(pair => pair._2.length == 2)
+grid.options().row(3).emptyCells().groupByOption().filter(pair => pair._2.length == 2)
+grid.options().row(4).emptyCells().groupByOption().filter(pair => pair._2.length == 2)
+grid.options().row(5).emptyCells().groupByOption().filter(pair => pair._2.length == 2)
+grid.options().row(6).emptyCells().groupByOption().filter(pair => pair._2.length == 2)
+grid.options().row(7).emptyCells().groupByOption().filter(pair => pair._2.length == 2)
+grid.options().row(8).emptyCells().groupByOption().filter(pair => pair._2.length == 2)
+
+val s1 = grid.options().array.flatMap(_.filter(_.options.set.size == 1)).toList
+
+grid.options().box(7).emptyCells().groupByOption().filter(pair => pair._2.length == 2)
+grid.options().box(7).emptyCells().groupByOption().filter(pair => pair._2.length == 2)
+  .toList
+
+grid.options().box(7).emptyCells().groupByOption().filter(pair => pair._2.length == 2)
+  .map(e => NumPositions(e._1, e._2: _*))
+  .groupBy(e => (e.positions(0), e.positions(1)))
+  .filter(e => e._2.toList.length == 2)
+  .map(e => (e._1, Options(e._2.map(_.num).toSet)))
+
+grid.options().box(7).emptyCells().groupByOption().filter(pair => pair._2.length == 2)
+  .map(e => NumPositions(e._1, e._2: _*))
+  .groupBy(e => (e.positions(0), e.positions(1)))
+  .filter(e => e._2.toList.length == 2)
+  .map(e => (e._1, Options(e._2.map(_.num).toSet)))
+  .toList
+
+println("Box 7")
+grid.options().box(7).emptyCells().groupByOption().filter(pair => pair._2.length == 2)
+  .map(e => NumPositions(e._1, e._2: _*))
+  .groupBy(e => (e.positions(0), e.positions(1)))
+  .filter(e => e._2.toList.length == 2)
+  .map(e => (e._1, Options(e._2.map(_.num).toSet)))
+  .toList
+  .foreach(cell => println(s"Cell ${cell._1}, ${cell._2}"))
+
+
+println("The Strategy Naked Pair")
+(0 until 9).map(i => {
+  (grid.options().box(i).emptyCells().groupByOption().filter(pair => pair._2.length == 2)
+    .map(e => NumPositions(e._1, e._2: _*))
+    .groupBy(e => (e.positions(0), e.positions(1)))
+    .filter(e => e._2.toList.length == 2)
+    .map(e => ("box", e._1, Options(e._2.map(_.num).toSet))),
+    grid.options().row(i).emptyCells().groupByOption().filter(pair => pair._2.length == 2)
+      .map(e => NumPositions(e._1, e._2: _*))
+      .groupBy(e => (e.positions(0), e.positions(1)))
+      .filter(e => e._2.toList.length == 2)
+      .map(e => ("row", e._1, Options(e._2.map(_.num).toSet))),
+    grid.options().col(i).emptyCells().groupByOption().filter(pair => pair._2.length == 2)
+      .map(e => NumPositions(e._1, e._2: _*))
+      .groupBy(e => (e.positions(0), e.positions(1)))
+      .filter(e => e._2.toList.length == 2)
+      .map(e => ("col", e._1, Options(e._2.map(_.num).toSet)))
+  )
+}).flatMap(e => e._1.map(e => (e._1, e._2, e._3)) ++ e._2.map(e => (e._1, e._2, e._3)) ++ e._3.map(e => (e._1, e._2, e._3)))
+  .toList

@@ -14,28 +14,11 @@ type Num = Int
 final val ZERO = 0
 
 case class Options(set: Set[Num])
-case class Cell(value: Num, options: Options)
-case class Grid(array: Array[Array[Cell]])
 case class Position(row: Int, col: Int)
-case class Pair(cell: Cell, position: Position)
-trait Strategy {
-  def apply(grid: Grid): Grid
-}
-/**
- * The Strategy Naked Single:
- * If a cell only has a single candidate, that candidate solves the cell. This is obvious: if there are no other
- * possible candidates in a cell, the only one present must be it.
- */
-class NakedSolver extends Strategy {
-  def apply(grid: Grid): Grid = {
-    val g = grid
-      grid.options().zip()
-      .filter(pair => pair.cell.options.set.size == 1)
-      .foreach(e => g.array(e.position.row)(e.position.col) = Cell(e.cell.options.set.head, Options(Set())))
-    g
-  }
-}
-
+case class Cell(value: Num, options: Options, position: Position)
+//case class Pair(cell: Cell, position: Position)
+case class Grid(array: Array[Array[Cell]])
+case class NumPositions(num: Num, positions: Position*)
 object Sudoku {
   val size = 9
   val numbers: Array[Num] = Array[Num](1 to 9 :_*)
@@ -52,8 +35,10 @@ class Sudoku(val size: Int) {
       .toArray
 
   def arrayToGrid(a: Array[Array[Int]]): Grid =
-    Grid(a.map(r => r.map(c => Cell(c, Options(Set())))))
-
+    val array = (0 until 9).map(row => (0 until 9).map(col =>
+      Cell(a(row)(col), Options(Set()), Position(row, col))
+    ).toArray).toArray
+    Grid(array)
 }
 
 extension (a: Array[Num]) {
@@ -66,62 +51,39 @@ extension (a: Array[Cell]) {
   def getOptions: Array[Num] = a.map(cell => cell.options.set).reduce(_ union _).toArray
   def union(b: Array[Cell]): Array[Cell] =
     (a ++ b).distinct
-}
+  def unique(): Array[Cell] =
+    a.filter(cell => cell.options.set.size == 1)
 
-extension (a: Array[Pair]) {
-  def valueEqualTo(n: Num): Array[Pair] = a.filter(cell => cell.cell.value == n)
-  def index(): Array[Position] = a.map(_.position)
-  def col(col: Int): Array[Pair] = a.filter(_.position.col == col)
-  def row(row: Int): Array[Pair] = a.filter(_.position.row == row)
-  def box(num: Int): Array[Pair] = {
-    val row = (num / 3) * 3
-    val col = (num % 3) * 3
-    a.filter(p => p.position.row >= row && p.position.row < row + 3 && p.position.col >= col && p.position.col < col + 3)
-  }
-  def uniqueOption(): Array[Pair] = a.filter(pair => pair.cell.options.set.size == 1)
+  def groupBy(): Map[Num, Array[Cell]] =
+    a.flatMap(e => e.options.set.map(i => (i, e)))
+      .groupBy(e => e(0))
+      .flatMap(e => Map(e._1 -> e._2.map(e => e._2)))
+
+  def groupByOption(): Map[Num, Array[Position]] =
+    a.flatMap(e => e.options.set.map(i => (i, e.position)))
+      .groupBy(e => e(0))
+      .flatMap(e => Map(e._1 -> e._2.map(e => e._2)))
+
+  def groupByPosition(): Map[Position, Array[Num]] =
+    a.flatMap(e => e.options.set.map(i => (i, e.position)))
+      .groupBy(e => e(1))
+      .flatMap(e => Map(e._1 -> e._2.map(e => e._1)))
   /*def pair(): Array[Pair] =
     val pair = a.filter(pair => pair.cell.options.set.size == 2)
     if pair.length == 2 then pair else Array()*/
+  def emptyCells(): Array[Cell] = a.filter(cell => cell.value == ZERO)
 
-  def emptyCells(): Array[Pair] = a.filter(_.cell.value == ZERO)
-  def groupBy(): List[Map[Num, Array[Pair]]] =
-    a.flatMap(e => e.cell.options.set.map(i => (i, e)))
-    .groupBy(e => e(0))
-    .map(e => Map(e._1 -> e._2.map(e => e._2)))
-    .toList
-  def groupByOption(): List[Map[Num, Array[Position]]] =
-    a.flatMap(e => e.cell.options.set.map(i => (i, e.position)))
-    .groupBy(e => e(0))
-    .map(e => Map(e._1 -> e._2.map(e => e._2)))
-    .toList
-  def groupByPosition(): List[Map[Position, Array[Num]]] =
-    a.flatMap(e => e.cell.options.set.map(i => (i, e.position)))
-    .groupBy(e => e(1))
-    .map(e => Map(e._1 -> e._2.map(e => e._1)))
-    .toList
 }
 
-extension (l: List[Map[Num, Array[Position]]]) {
-  def unique: Array[(Num, Array[Position])] = l.flatMap(e => e.map(e => (e._1,e._2)).filter(_._2.length == 1)).toArray
-  //def pair(): Array[(Num, Array[Position])] = l.flatMap(e => e.map(e => (e._1,e._2)).filter(_._2.length == 2)).toArray
-}
-
-extension (l: List[Map[Position, Array[Num]]]) {
-  //def pair(): Array[(Position, Array[Num])] = l.flatMap(e => e.map(e => (e._1,e._2)).filter(_._2.length == 2)).toArray
-  /*def pair(): Array[(Position, Array[Num])] =
-    val p = l.flatMap(e => e.map(e => (e._1, e._2)).filter(_._2.length == 2)).toArray
-    if p.length == 2 && p(0)(0) == p(1)(0) && p(0)(1) == p(1)(1)  then p else Array()*/
-  def p = ???
-}
-
-extension (l:  List[Map[Num, Array[Pair]]]) {
-  def pair(): Array[Pair] = l.flatMap(e => e.map(e => (e._1,e._2)).filter(_._2.length == 2)).toArray
-    .flatMap(e => e._2.filter( i => i.cell.options.set.size == 2))
-}
-
-extension (g: Grid) {
-  def row(row: Int): Array[Cell] = g.array(row)
-  def col(col: Int): Array[Cell] = g.array.map(row => row(col))
+extension (a: Array[Array[Cell]]) {
+  def row(row: Int): Array[Cell] = a(row)
+  def col(col: Int): Array[Cell] = a.map(row => row(col))
+  def box(num: Int): Array[Cell] = {
+    val sqrt = Math.sqrt(Sudoku.size).toInt
+    val row = (num / 3) * 3
+    val col = (num % 3) * 3
+    a.map(row => row.slice(col, col + sqrt)).slice(row, row + sqrt).flatten
+  }
   def square(row: Int, col: Int): Array[Cell] = {
     val sqrt = Math.sqrt(Sudoku.size).toInt
     val rowStart = (row / sqrt) * sqrt
@@ -129,25 +91,34 @@ extension (g: Grid) {
     val rowEnd = rowStart + sqrt
     val colEnd = colStart + sqrt
 
-    g.array.slice(rowStart, rowEnd).flatMap(row => row.slice(colStart, colEnd))
+    a.slice(rowStart, rowEnd).flatMap(row => row.slice(colStart, colEnd))
   }
-  def options(): Grid =
-    Grid(g.zip().map(pair => pair.cell.value match {
-      case ZERO =>
-        Cell(ZERO, Options(Set(Sudoku.numbers.difference(
-          g.row(pair.position.row)
-            .union(g.col(pair.position.col))
-            .union(g.square(pair.position.row, pair.position.col))
-            .getValues): _*))
-        )
-      case _ => pair.cell
-    }).grouped(Sudoku.size).toArray)
+}
+
+
+extension (g: Grid) {
+  def options(): Array[Array[Cell]] =
+    (0 until 9).map(row => (0 until 9).map(col =>
+      if g.array(row)(col).value == ZERO then
+        Cell(ZERO, options(row, col), Position(row, col))
+      else g.array(row)(col)
+    ).toArray).toArray
 
   def options(r: Int, c: Int): Options =
-    Options(Set(Sudoku.numbers.difference(g.row(r).union(g.col(c)).union(g.square(r, c)).getValues): _*))
+    Options(Set(Sudoku.numbers.difference(g.array.row(r).union(g.array.col(c)).union(g.array.square(r, c)).getValues): _*))
 
-  def zip(): Array[Pair] =
-    g.array.zipWithIndex.flatMap(row => row(0).zipWithIndex.map(cell => Pair(cell(0), Position(row(1), cell(1)))))
+  def cleanup(l: List[Cell]): Grid = l match
+    case Nil => g
+    case head :: tail =>
+      val row = head.position.row
+      val col = head.position.col
+      val value = head.value
+      val options = head.options.set
+      val cell = Cell(value, Options(options), Position(row, col))
+      val array = g.array.updated(row, g.array(row).updated(col, cell))
+      Grid(array).cleanup(tail)
+
+  def removeOptions(l: List[(String, (Position, Position), Options)]): Grid = ???
 
   def sprint(): Unit = {
     for (row <- g.array) {
@@ -165,25 +136,5 @@ extension (g: Grid) {
         row.map(cell => cell.options.set).grouped(3).map(_.mkString(",")) foreach println
       else println(row.map(cell => cell.value).mkString(" "))
     })*/
-  }
-
-  def strategyNakedSimple(): Grid = {
-    val grid = g.options()
-    grid.zip()
-      .filter(pair => pair.cell.options.set.size == 1)
-      .foreach(e => grid.array(e.position.row)(e.position.col) = Cell(e.cell.options.set.head, Options(Set())))
-    grid
-  }
-
-  def strategyUnique(): Grid = {
-    val grid = g.options()
-      grid.zip()
-        .filter(p => p.position.col == 1)
-        .filter(p => p.cell.value == ZERO)
-        .flatMap(e => e.cell.options.set.map(i => (i, e.position)))
-        .groupBy(e => e(0))
-        .filter(e => e(1).size == 1)
-        .map(e => e(1))
-    grid
   }
 }
