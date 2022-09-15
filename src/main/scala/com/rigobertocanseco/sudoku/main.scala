@@ -17,16 +17,11 @@ def main(): Unit =
   grid.sprint()
 
   println("The Strategy Naked Single")
-  val s1: List[Cell] = grid.options().array.flatMap(_.filter(_.options.set.size == 1)).toList
+  val s1: List[Cell] = grid.nakedSingle
   s1.foreach(pair => println(s"Cell ${pair} has only one option: ${pair.options.set.head}"))
 
   println("The Strategy Unique")
-  val s2: List[Cell] = (0 until 9).map(i => {
-    (grid.options().box(i).emptyCells().groupByOption().filter(pair => pair._2.length == 1),
-      grid.options().col(i).emptyCells().groupByOption().filter(pair => pair._2.length == 1),
-      grid.options().row(i).emptyCells().groupByOption().filter(pair => pair._2.length == 1))
-    }).flatMap(e => e._1.map(e => (e._1, e._2.head)) ++ e._2.map(e => (e._1, e._2.head)) ++ e._3.map(e => (e._1, e._2.head)))
-    .toList.distinct.map(e => Cell(e._1, Options(Set()), e._2))
+  val s2: List[Cell] = grid.uniques
   s2.foreach(cell => println(s"Cell ${cell.position} has only one option in its box, row or column: ${cell.value}"))
 
   println("The Strategy Cleanup")
@@ -34,26 +29,18 @@ def main(): Unit =
   grid2.sprint()
 
   println("The Strategy Naked Pair")
-  (0 until 9).map(i => {
-    (grid2.options().box(i).emptyCells().groupByOption().filter(pair => pair._2.length == 2)
-      .map(e => NumPositions(e._1, e._2: _*))
-      .groupBy(e => (e.positions(0), e.positions(1)))
-      .filter(e => e._2.toList.length == 2)
-      .map(e => ("box", e._1, Options(e._2.map(_.num).toSet))),
-      grid2.options().row(i).emptyCells().groupByOption().filter(pair => pair._2.length == 2)
-        .map(e => NumPositions(e._1, e._2: _*))
-        .groupBy(e => (e.positions(0), e.positions(1)))
-        .filter(e => e._2.toList.length == 2)
-        .map(e => ("row", e._1, Options(e._2.map(_.num).toSet))),
-      grid2.options().col(i).emptyCells().groupByOption().filter(pair => pair._2.length == 2)
-        .map(e => NumPositions(e._1, e._2: _*))
-        .groupBy(e => (e.positions(0), e.positions(1)))
-        .filter(e => e._2.toList.length == 2)
-        .map(e => ("col", e._1, Options(e._2.map(_.num).toSet)))
-      )
-  }).flatMap(e => e._1.map(e => (e._1, e._2, e._3)) ++ e._2.map(e => (e._1, e._2, e._3)) ++ e._3.map(e => (e._1, e._2, e._3)))
-    .toList
-    .foreach(e => println(s"${e._1} Positions ${e._2} has only two options: ${e._3}"))
+  grid2.nakedPair.foreach(e => println(s"${e._1} Positions ${e._2} has only two options: ${e._3}"))
 
+  val grid4 = grid2.updateBox(8, Array(
+    Cell(0, Options(Set()), Position(0, 0)),
+    Cell(0, Options(Set()), Position(0, 1)),
+    Cell(0, Options(Set()), Position(0, 2)),
+    Cell(0, Options(Set()), Position(0, 3)),
+    Cell(0, Options(Set()), Position(0, 4)),
+    Cell(0, Options(Set()), Position(0, 5)),
+    Cell(0, Options(Set()), Position(0, 6)),
+    Cell(0, Options(Set()), Position(0, 7)),
+    Cell(0, Options(Set()), Position(0, 8))))
+  grid4.sprint()
 
 end main

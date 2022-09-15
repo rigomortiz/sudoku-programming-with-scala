@@ -339,3 +339,37 @@ println("The Strategy Naked Pair")
   )
 }).flatMap(e => e._1.map(e => (e._1, e._2, e._3)) ++ e._2.map(e => (e._1, e._2, e._3)) ++ e._3.map(e => (e._1, e._2, e._3)))
   .toList
+
+grid.options().row(6).emptyCells().groupByOption().filter(pair => pair._2.length == 2)
+  .map(e => NumPositions(e._1, e._2: _*))
+  .groupBy(e => (e.positions(0), e.positions(1)))
+  .filter(e => e._2.toList.length == 2)
+  .map(e => ("box", e._1, Options(e._2.map(_.num).toSet)))
+
+grid.options().row(6).emptyCells().groupByOption().filter(pair => pair._2.length == 2)
+  .map(e => NumPositions(e._1, e._2: _*))
+  .groupBy(e => (e.positions(0), e.positions(1)))
+  .filter(e => e._2.toList.length == 2)
+  .map(e => ("box", e._1, Options(e._2.map(_.num).toSet)))
+  .toList
+
+grid.options().row(6).emptyCells().groupByOption().filter(pair => pair._2.length == 2)
+  .map(e => NumPositions(e._1, e._2: _*))
+  .groupBy(e => (e.positions(0), e.positions(1)))
+  .filter(e => e._2.toList.length == 2)
+
+
+grid.options().row(6).emptyCells().groupByOption().filter(pair => pair._2.length == 2)
+  .map(e => NumPositions(e._1, e._2: _*))
+  .groupBy(e => (e.positions(0), e.positions(1)))
+  .filter(e => e._2.toList.length == 2)
+  .map(e => ("box", e._1, Options(e._2.map(_.num).toSet)))
+  .toList
+  
+val c = grid.options().row(6).emptyCells().groupByOption().filter(pair => pair._2.length == 2)
+  .map(e => NumPositions(e._1, e._2: _*))
+  .groupBy(e => (e.positions(0), e.positions(1)))
+  .filter(e => e._2.toList.length == 2)
+  .map(e => ("box", e._1, Options(e._2.map(_.num).toSet)))
+  .toList
+
